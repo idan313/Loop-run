@@ -1,0 +1,17 @@
+{
+  "name": "לולאה",
+  "short_name": "לולאה",
+  "description": "מסלול ריצה לפי מרחק, עם ניווט קולי ב-Apple Maps",
+  "lang": "he",
+  "dir": "rtl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#111518",
+  "theme_color": "#111518",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

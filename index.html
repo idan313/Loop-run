@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>לולאה</title>
+<meta name="description" content="בונה מסלול ריצה לפי מרחק ומעביר אותו לניווט קולי ב-Apple Maps.">
+<meta name="theme-color" content="#eef1f2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111518" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="לולאה">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Hebrew:wght@400;500;600;700&family=Secular+One&family=IBM+Plex+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div id="app">
+  <div id="map" aria-label="מפה"></div>
+
+  <main id="panel">
+    <header class="brand">
+      <h1>לולאה</h1>
+      <p>מסלול ריצה במרחק שבחרת, עם ניווט קולי ב-Apple Maps</p>
+    </header>
+
+    <section class="field" aria-labelledby="lbl-start">
+      <div class="label-row">
+        <span class="label" id="lbl-start">נקודת התחלה</span>
+        <span class="value" id="start-label">לא נבחרה</span>
+      </div>
+      <div class="row">
+        <button type="button" class="btn ghost" id="btn-locate">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+          מיקום נוכחי
+        </button>
+        <div class="search">
+          <input id="search" type="search" placeholder="חיפוש כתובת או מקום" autocomplete="off" enterkeyhint="search">
+          <ul id="search-results" role="listbox" hidden></ul>
+        </div>
+      </div>
+      <p class="hint" id="map-hint">אפשר גם ללחוץ על המפה</p>
+    </section>
+
+    <section class="field" aria-labelledby="lbl-mode">
+      <span class="label" id="lbl-mode">צורת המסלול</span>
+      <div class="seg" role="radiogroup" aria-labelledby="lbl-mode" id="mode">
+        <button type="button" role="radio" aria-checked="true" data-value="loop">מעגלי, חוזר להתחלה</button>
+        <button type="button" role="radio" aria-checked="false" data-value="p2p">מסתיים בנקודה אחרת</button>
+      </div>
+      <div class="label-row" id="end-row" hidden>
+        <span class="label">נקודת סיום</span>
+        <span class="value" id="end-label">לא נבחרה</span>
+        <button type="button" class="link" id="btn-pick-end">סמן במפה</button>
+      </div>
+    </section>
+
+    <section class="field">
+      <label class="label" for="distance">מרחק</label>
+      <div class="distance">
+        <input id="distance" type="number" inputmode="decimal" min="1" max="30" step="0.1" value="5">
+        <span>ק״מ</span>
+      </div>
+      <div class="chips" id="chips">
+        <button type="button" data-km="3">3</button>
+        <button type="button" data-km="5">5</button>
+        <button type="button" data-km="8">8</button>
+        <button type="button" data-km="10">10</button>
+        <button type="button" data-km="15">15</button>
+        <button type="button" data-km="21.1">21.1</button>
+      </div>
+    </section>
+
+    <details class="field prefs" id="prefs">
+      <summary>העדפות</summary>
+      <div class="pref">
+        <span class="label" id="lbl-traffic">הימנעות מכבישים ראשיים</span>
+        <div class="seg small" role="radiogroup" aria-labelledby="lbl-traffic" id="pref-traffic">
+          <button type="button" role="radio" data-value="0">לא משנה</button>
+          <button type="button" role="radio" data-value="1">רגיל</button>
+          <button type="button" role="radio" data-value="2">כמה שיותר</button>
+        </div>
+      </div>
+      <div class="pref">
+        <span class="label" id="lbl-green">שבילים ופארקים</span>
+        <div class="seg small" role="radiogroup" aria-labelledby="lbl-green" id="pref-green">
+          <button type="button" role="radio" data-value="0">לא משנה</button>
+          <button type="button" role="radio" data-value="1">רגיל</button>
+          <button type="button" role="radio" data-value="2">כמה שיותר</button>
+        </div>
+      </div>
+      <label class="check"><input type="checkbox" id="pref-steps" checked> להימנע ממדרגות</label>
+      <label class="check"><input type="checkbox" id="pref-lit"> להעדיף רחובות מוארים, לריצת ערב</label>
+    </details>
+
+    <button type="button" class="btn primary big" id="btn-build">בנה מסלול</button>
+    <p id="status" role="status" aria-live="polite"></p>
+
+    <section id="results" hidden aria-label="מסלולים">
+      <div class="cards" id="cards" role="radiogroup" aria-label="בחירת מסלול"></div>
+      <div class="profile" id="profile" hidden>
+        <div class="profile-head"><span>גובה לאורך המסלול</span><span id="profile-range" class="num"></span></div>
+        <svg id="profile-svg" viewBox="0 0 300 64" preserveAspectRatio="none" aria-hidden="true"></svg>
+      </div>
+      <div class="actions">
+        <a class="btn primary big" id="go-apple" href="#" rel="noopener">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19 12 4l7 15-7-4z"/></svg>
+          נווט ב-Apple Maps
+        </a>
+        <p class="sub" id="apple-sub"></p>
+        <div class="row wrap">
+          <a class="btn ghost" id="go-google" href="#" rel="noopener">Google Maps</a>
+          <button type="button" class="btn ghost" id="btn-gpx">קובץ GPX</button>
+          <button type="button" class="btn ghost" id="btn-share">העתק קישור</button>
+          <button type="button" class="btn ghost" id="btn-more">מסלולים אחרים</button>
+        </div>
+        <p class="note" id="google-note"></p>
+      </div>
+    </section>
+
+    <details class="field help">
+      <summary>איך הניווט עובד</summary>
+      <p>המסלול נבנה כאן, ונשלח ל-Apple Maps כרשימת נקודות ביניים במצב הליכה. Apple Maps מנווטת עם הוראות קוליות גם כשהמסך כבוי, ומעבירה התראות לשעון.</p>
+      <p>נקודות הביניים נבחרות כך שהדרך הקצרה ביותר ביניהן היא המסלול שלנו. Apple Maps מחשבת לבד, ולכן המרחק אצלה יכול להיות שונה במעט.</p>
+      <p>דרוש iOS 18.4 ומעלה. אם האפליקציה של Apple Maps פותחת רק חלק מהנקודות, עדכן את המכשיר.</p>
+      <p>לריצה בלי קליטה: הורד מראש מפה אופליין ב-Apple Maps לאזור הריצה. Google Maps לא נותנת הוראות הליכה באופליין.</p>
+      <p>קובץ GPX מתאים לשעונים ולאפליקציות ריצה שמייבאות מסלולים.</p>
+      <p class="credit">נתוני מפה © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">תורמי OpenStreetMap</a> · גובה מ-<a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a></p>
+    </details>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
