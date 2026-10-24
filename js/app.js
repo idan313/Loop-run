@@ -1,7 +1,7 @@
 /** בקר האפליקציה: טופס, מפה, worker ויצוא. */
-import { bboxAround, sample, climb, thin, CLS } from './engine.js?v=3';
-import { fetchWays, elevations, geocode, reverse } from './data.js?v=3';
-import { appleMapsUrl, appleVariants, googleMapsUrl, GOOGLE_MAX_WAYPOINTS, toGpx, shareOrDownload } from './export.js?v=3';
+import { bboxAround, sample, climb, thin, CLS } from './engine.js?v=4';
+import { fetchWays, elevations, geocode, reverse } from './data.js?v=4';
+import { appleMapsUrl, appleVariants, googleMapsUrl, GOOGLE_MAX_WAYPOINTS, toGpx, shareOrDownload } from './export.js?v=4';
 
 const $ = (s) => document.querySelector(s);
 const SETTINGS_KEY = 'loop.settings.v1';
@@ -37,7 +37,7 @@ function saveSettings() {
 
 /* ===================== worker ===================== */
 
-const worker = new Worker(new URL('./worker.js?v=3', import.meta.url), { type: 'module' });
+const worker = new Worker(new URL('./worker.js?v=4', import.meta.url), { type: 'module' });
 let msgId = 0;
 const pending = new Map();
 worker.onmessage = ({ data }) => {

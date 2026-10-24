@@ -83,11 +83,17 @@ export function appleVariants(coords, waypoints) {
   }
   const raw = (pairs) => `https://maps.apple.com/directions?${pairs.map(([k, v]) => `${k}=${v}`).join('&')}`;
   const w = waypoints.map((p) => ['waypoint', fmt(p)]);
+  // סבב 2: הנקודות מופיעות לרגע ונעלמות בכל הגרסאות של מצב הליכה.
+  // החשד: Apple Maps לא מחשבת מסלול הליכה עם כמה עצירות, או מגבילה את מספרן.
+  // כל קישור כאן בודק אחת משתי האפשרויות.
+  const dest = fmt(loop ? near : end);
+  const walk = (k) => raw([['source', fmt(start)], ...w.slice(0, k), ['destination', dest], ['mode', 'walking']]);
+  const all = (mode) => raw([['source', fmt(start)], ...w, ['destination', dest], ['mode', mode]]);
   return [
-    { id: 'A', label: 'הקישור הנוכחי', url: appleMapsUrl(start, end, waypoints) },
-    { id: 'B', label: 'בלי מוצא, מתחיל מהמיקום שלך', url: raw([['destination', fmt(end)], ...w, ['mode', 'walking']]) },
-    { id: 'C', label: loop ? 'יעד 60 מ\' לפני הסוף, שונה מהמוצא' : 'יעד מוזז 60 מ\'', url: raw([['source', fmt(start)], ['destination', fmt(near)], ...w, ['mode', 'walking']]) },
-    { id: 'D', label: 'הנקודות לפני היעד בסדר הפרמטרים', url: raw([['source', fmt(start)], ...w, ['destination', fmt(loop ? near : end)], ['mode', 'walking']]) },
-    { id: 'E', label: 'מצב הליכה ראשון, בלי מוצא', url: raw([['mode', 'walking'], ...w, ['destination', fmt(loop ? near : end)]]) },
+    { id: 'F', label: 'הליכה, נקודת ביניים אחת', url: walk(1) },
+    { id: 'G', label: 'הליכה, 2 נקודות ביניים', url: walk(2) },
+    { id: 'H', label: 'הליכה, 3 נקודות ביניים', url: walk(3) },
+    { id: 'I', label: 'נהיגה, כל הנקודות', url: all('driving') },
+    { id: 'J', label: 'אופניים, כל הנקודות', url: all('cycling') },
   ];
 }
