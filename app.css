@@ -194,3 +194,6 @@ details.field summary { cursor: pointer; font-weight: 600; padding: 12px 0; list
 @media (prefers-reduced-motion: reduce) {
   .btn.loading::after { animation-duration: 2.4s; }
 }
+
+.test ol { margin: 8px 0 0; padding-inline-start: 22px; display: flex; flex-direction: column; gap: 10px; }
+.test a { color: var(--accent); font-weight: 600; }

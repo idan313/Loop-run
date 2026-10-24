@@ -1,5 +1,5 @@
 /* מעטפת האפליקציה ואריחי מפה שכבר נצפו נשמרים, כדי שהאפליקציה תיפתח גם בקליטה חלשה. */
-const VERSION = 'loop-v1';
+const VERSION = 'loop-v2';
 const SHELL = ['./', './index.html', './app.css', './js/app.js', './js/engine.js', './js/data.js', './js/export.js', './js/worker.js', './manifest.webmanifest', './icons/icon.svg', './icons/apple-touch-icon.png'];
 const TILES = 'loop-tiles-v1';
 const MAX_TILES = 1500;

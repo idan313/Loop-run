@@ -65,3 +65,29 @@ export async function shareOrDownload(filename, text, mime = 'application/gpx+xm
   setTimeout(() => URL.revokeObjectURL(url), 5000);
   return 'downloaded';
 }
+
+/**
+ * גרסאות חלופיות של קישור Apple Maps, לבדיקה על מכשיר.
+ * בבדיקה הראשונה Apple Maps פתחה רק את המוצא ונקודה אחת, ולא ידוע עדיין
+ * איזה פרט בקישור גרם לזה. כל גרסה משנה דבר אחד בלבד.
+ */
+export function appleVariants(coords, waypoints) {
+  const start = coords[0], end = coords[coords.length - 1];
+  const loop = Math.abs(start[0] - end[0]) < 1e-6 && Math.abs(start[1] - end[1]) < 1e-6;
+  // נקודה כ-60 מ' לפני הסוף, כדי שהיעד לא יהיה זהה למוצא
+  let near = end, acc = 0;
+  for (let i = coords.length - 1; i > 0 && acc < 60; i--) {
+    const [a, b] = [coords[i], coords[i - 1]];
+    acc += Math.hypot((a[0] - b[0]) * 111320, (a[1] - b[1]) * 111320 * Math.cos(a[0] * Math.PI / 180));
+    near = b;
+  }
+  const raw = (pairs) => `https://maps.apple.com/directions?${pairs.map(([k, v]) => `${k}=${v}`).join('&')}`;
+  const w = waypoints.map((p) => ['waypoint', fmt(p)]);
+  return [
+    { id: 'A', label: 'הקישור הנוכחי', url: appleMapsUrl(start, end, waypoints) },
+    { id: 'B', label: 'בלי מוצא, מתחיל מהמיקום שלך', url: raw([['destination', fmt(end)], ...w, ['mode', 'walking']]) },
+    { id: 'C', label: loop ? 'יעד 60 מ\' לפני הסוף, שונה מהמוצא' : 'יעד מוזז 60 מ\'', url: raw([['source', fmt(start)], ['destination', fmt(near)], ...w, ['mode', 'walking']]) },
+    { id: 'D', label: 'הנקודות לפני היעד בסדר הפרמטרים', url: raw([['source', fmt(start)], ...w, ['destination', fmt(loop ? near : end)], ['mode', 'walking']]) },
+    { id: 'E', label: 'מצב הליכה ראשון, בלי מוצא', url: raw([['mode', 'walking'], ...w, ['destination', fmt(loop ? near : end)]]) },
+  ];
+}

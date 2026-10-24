@@ -1,7 +1,7 @@
 /** בקר האפליקציה: טופס, מפה, worker ויצוא. */
 import { bboxAround, sample, climb, thin, CLS } from './engine.js';
 import { fetchWays, elevations, geocode, reverse } from './data.js';
-import { appleMapsUrl, googleMapsUrl, GOOGLE_MAX_WAYPOINTS, toGpx, shareOrDownload } from './export.js';
+import { appleMapsUrl, appleVariants, googleMapsUrl, GOOGLE_MAX_WAYPOINTS, toGpx, shareOrDownload } from './export.js';
 
 const $ = (s) => document.querySelector(s);
 const SETTINGS_KEY = 'loop.settings.v1';
@@ -358,6 +358,14 @@ function renderActions() {
   const start = r.coords[0], end = r.coords[r.coords.length - 1];
   $('#go-apple').href = appleMapsUrl(start, end, r.waypoints);
   $('#apple-sub').textContent = `${r.waypoints.length} נקודות ביניים · ניווט קולי גם כשהמסך כבוי, והתראות בשעון`;
+  $('#test-count').textContent = String(r.waypoints.length + 2);
+  $('#apple-variants').replaceChildren(...appleVariants(r.coords, r.waypoints).map((v) => {
+    const li = document.createElement('li');
+    const a = document.createElement('a');
+    a.href = v.url; a.rel = 'noopener'; a.textContent = `${v.id} · ${v.label}`;
+    li.append(a);
+    return li;
+  }));
   const gw = thin(r.waypoints, GOOGLE_MAX_WAYPOINTS);
   $('#go-google').href = googleMapsUrl(start, end, gw);
   $('#google-note').textContent = r.waypoints.length > GOOGLE_MAX_WAYPOINTS

@@ -60,35 +60,63 @@ export async function fetchWays(bbox, { signal, onProgress = () => {} } = {}) {
   // מרחיבים מעט את התיבה כדי שבקשה הבאה באזור תתאים למטמון
   const pad = 0.004;
   const big = [bbox[0] - pad, bbox[1] - pad, bbox[2] + pad, bbox[3] + pad];
-  const body = new URLSearchParams({ data: overpassQuery(big) });
-  let lastError = null;
-  for (const [i, url] of MIRRORS.entries()) {
-    if (signal?.aborted) throw new DOMException('aborted', 'AbortError');
-    onProgress(i === 0 ? 'מוריד את מפת האזור…' : `השרת הראשון לא ענה, מנסה שרת ${i + 1}…`);
-    const timeout = new AbortController();
-    const timer = setTimeout(() => timeout.abort(), 70000);
-    const onAbort = () => timeout.abort();
-    signal?.addEventListener('abort', onAbort);
-    try {
-      const res = await fetch(url, { method: 'POST', body, signal: timeout.signal });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const text = await res.text();
-      // בדיקה זולה בלי לפענח כאן את כל ה-JSON; הפענוח קורה ב-worker
-      if (!text.includes('"elements"')) throw new Error('תשובה לא תקינה');
-      const remark = text.slice(-600).match(/"remark"\s*:\s*"([^"]*)"/);
-      if (remark && /runtime error|timed out|out of memory/i.test(remark[1])) throw new Error(remark[1]);
-      const key = `https://loop.local/osm/${big.map((n) => n.toFixed(4)).join('_')}`;
-      toCache(key, text, big);
-      return { text, key, bbox: big, cached: false };
-    } catch (e) {
-      if (signal?.aborted) throw new DOMException('aborted', 'AbortError');
-      lastError = e;
-    } finally {
+  const body = new URLSearchParams({ data: overpassQuery(big) }).toString();
+  const key = `https://loop.local/osm/${big.map((n) => n.toFixed(4)).join('_')}`;
+
+  // מרוץ מדורג: שרת ראשון מיד, ואם הוא לא ענה תוך STAGGER שניות, מצטרף
+  // הבא בתור במקביל. הראשון שמחזיר תשובה תקינה מנצח, והשאר מבוטלים.
+  const STAGGER = 7000, PER_TRY = 45000;
+  const controllers = [];
+  const abortAll = () => controllers.forEach((c) => c.abort());
+  signal?.addEventListener('abort', abortAll);
+  const started = Date.now();
+  const tick = setInterval(() => {
+    const secs = Math.round((Date.now() - started) / 1000);
+    const active = controllers.length;
+    onProgress(active > 1 ? `מוריד את מפת האזור… ${secs} שנ׳ · מנסה ${active} שרתים במקביל` : `מוריד את מפת האזור… ${secs} שנ׳`);
+  }, 1000);
+  onProgress('מוריד את מפת האזור…');
+
+  // שרת שנכשל מהר מפעיל מיד את הבא בתור, בלי לחכות לתור שלו
+  let next = 0, done = false;
+  const text = await new Promise((resolve, reject) => {
+    let failures = 0, timer = null;
+    const launch = () => {
+      if (done || next >= MIRRORS.length) return;
+      const url = MIRRORS[next++];
       clearTimeout(timer);
-      signal?.removeEventListener('abort', onAbort);
-    }
-  }
-  throw Object.assign(new Error('לא הצלחתי להוריד את מפת האזור. בדוק חיבור לאינטרנט ונסה שוב.'), { cause: lastError, code: 'MAP_DOWNLOAD' });
+      timer = setTimeout(launch, STAGGER);
+      const c = new AbortController();
+      controllers.push(c);
+      const t = setTimeout(() => c.abort(), PER_TRY);
+      fetch(url, { method: 'POST', body, headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, signal: c.signal })
+        .then(async (res) => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const body = await res.text();
+          // בדיקה זולה בלי לפענח כאן את כל ה-JSON; הפענוח קורה ב-worker
+          if (!body.includes('"elements"')) throw new Error('תשובה לא תקינה');
+          const remark = body.slice(-600).match(/"remark"\s*:\s*"([^"]*)"/);
+          if (remark && /runtime error|timed out|out of memory/i.test(remark[1])) throw new Error(remark[1]);
+          if (!done) { done = true; clearTimeout(timer); resolve(body); }
+        })
+        .catch((e) => {
+          if (done) return;
+          if (signal?.aborted) { done = true; clearTimeout(timer); reject(new DOMException('aborted', 'AbortError')); return; }
+          if (++failures >= MIRRORS.length) { done = true; clearTimeout(timer); reject(e); return; }
+          launch();
+        })
+        .finally(() => clearTimeout(t));
+    };
+    signal?.addEventListener('abort', () => { if (!done) { done = true; clearTimeout(timer); reject(new DOMException('aborted', 'AbortError')); } });
+    launch();
+  }).catch((e) => {
+    clearInterval(tick); abortAll(); signal?.removeEventListener('abort', abortAll);
+    if (e.name === 'AbortError') throw e;
+    throw Object.assign(new Error('לא הצלחתי להוריד את מפת האזור מאף שרת. בדוק חיבור ונסה שוב בעוד דקה.'), { cause: e, code: 'MAP_DOWNLOAD' });
+  });
+  clearInterval(tick); abortAll(); signal?.removeEventListener('abort', abortAll);
+  toCache(key, text, big);
+  return { text, key, bbox: big, cached: false };
 }
 
 /** גובה לעד 100 נקודות (מודל Copernicus 90 מ' דרך Open-Meteo). */
