@@ -1,6 +1,6 @@
 /* מעטפת האפליקציה ואריחי מפה שכבר נצפו נשמרים, כדי שהאפליקציה תיפתח גם בקליטה חלשה. */
-const VERSION = 'loop-v2';
-const SHELL = ['./', './index.html', './app.css', './js/app.js', './js/engine.js', './js/data.js', './js/export.js', './js/worker.js', './manifest.webmanifest', './icons/icon.svg', './icons/apple-touch-icon.png'];
+const VERSION = 'loop-v3';
+const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon.svg', './icons/apple-touch-icon.png'];
 const TILES = 'loop-tiles-v1';
 const MAX_TILES = 1500;
 
@@ -38,6 +38,6 @@ self.addEventListener('fetch', (e) => {
   }
   if (url.origin === location.origin) {
     // רשת קודם, כדי שעדכונים יגיעו מיד; מטמון כשאין רשת
-    e.respondWith(fetch(req).then((res) => { if (res.ok) caches.open(VERSION).then((c) => c.put(req, res.clone())); return res; }).catch(() => caches.match(req).then((r) => r || caches.match('./index.html'))));
+    e.respondWith(fetch(req, { cache: 'no-cache' }).then((res) => { if (res.ok) caches.open(VERSION).then((c) => c.put(req, res.clone())); return res; }).catch(() => caches.match(req).then((r) => r || caches.match('./index.html'))));
   }
 });

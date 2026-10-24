@@ -3,7 +3,7 @@
  * פענוח נתוני המפה, בניית הגרף, חיפוש מסלולים ונקודות ניווט.
  * הגרף נשמר בזיכרון בין בקשות באותו אזור.
  */
-import { buildGraph, plan, navWaypoints } from './engine.js';
+import { buildGraph, plan, navWaypoints } from './engine.js?v=3';
 
 let graph = null, graphKey = null;
 
