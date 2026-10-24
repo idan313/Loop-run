@@ -1,7 +1,7 @@
 /** בקר האפליקציה: טופס, מפה, worker ויצוא. */
-import { bboxAround, sample, climb, thin, CLS } from './engine.js?v=4';
-import { fetchWays, elevations, geocode, reverse } from './data.js?v=4';
-import { appleMapsUrl, appleVariants, googleMapsUrl, GOOGLE_MAX_WAYPOINTS, toGpx, shareOrDownload } from './export.js?v=4';
+import { bboxAround, sample, climb, thin, CLS } from './engine.js?v=5';
+import { fetchWays, elevations, geocode, reverse } from './data.js?v=5';
+import { googleMapsUrl, toGpx, shareOrDownload } from './export.js?v=5';
 
 const $ = (s) => document.querySelector(s);
 const SETTINGS_KEY = 'loop.settings.v1';
@@ -37,7 +37,7 @@ function saveSettings() {
 
 /* ===================== worker ===================== */
 
-const worker = new Worker(new URL('./worker.js?v=4', import.meta.url), { type: 'module' });
+const worker = new Worker(new URL('./worker.js?v=5', import.meta.url), { type: 'module' });
 let msgId = 0;
 const pending = new Map();
 worker.onmessage = ({ data }) => {
@@ -320,7 +320,8 @@ function render() {
   }
   waypointLayer.clearLayers();
   const cur = state.routes[state.selected];
-  for (const w of cur.waypoints) L.marker(w, { icon: L.divIcon({ className: '', html: '<div class="wpt"></div>', iconSize: [10, 10] }), interactive: false, keyboard: false }).addTo(waypointLayer);
+  if (cur.google.coords) L.polyline(cur.google.coords, { color: css('--ink'), weight: 2, opacity: 0.8, dashArray: '4 6', interactive: false }).addTo(waypointLayer);
+  for (const w of cur.google.points) L.marker(w, { icon: L.divIcon({ className: '', html: '<div class="wpt"></div>', iconSize: [10, 10] }), interactive: false, keyboard: false }).addTo(waypointLayer);
 
   const cards = $('#cards');
   cards.replaceChildren(...state.routes.map((r, i) => {
@@ -356,21 +357,15 @@ function fitSelected() {
 function renderActions() {
   const r = state.routes[state.selected];
   const start = r.coords[0], end = r.coords[r.coords.length - 1];
-  $('#go-apple').href = appleMapsUrl(start, end, r.waypoints);
-  $('#apple-sub').textContent = `${r.waypoints.length} נקודות ביניים · ניווט קולי גם כשהמסך כבוי, והתראות בשעון`;
-  $('#test-count').textContent = String(r.waypoints.length + 2);
-  $('#apple-variants').replaceChildren(...appleVariants(r.coords, r.waypoints).map((v) => {
-    const li = document.createElement('li');
-    const a = document.createElement('a');
-    a.href = v.url; a.rel = 'noopener'; a.textContent = `${v.id} · ${v.label}`;
-    li.append(a);
-    return li;
-  }));
-  const gw = thin(r.waypoints, GOOGLE_MAX_WAYPOINTS);
-  $('#go-google').href = googleMapsUrl(start, end, gw);
-  $('#google-note').textContent = r.waypoints.length > GOOGLE_MAX_WAYPOINTS
-    ? `Google Maps מקבלת עד ${GOOGLE_MAX_WAYPOINTS} נקודות, לכן שם המסלול עלול לסטות. וגם: אין בה הוראות הליכה באופליין.`
-    : 'Google Maps לא נותנת הוראות הליכה באופליין.';
+  const gg = r.google;
+  $('#go-google').href = googleMapsUrl(start, end, gg.points);
+  if (gg.length) {
+    const diff = gg.length - r.length;
+    const match = Math.round(gg.match * 100);
+    $('#google-sub').textContent = `${gg.points.length} נקודות ביניים · ב-Google צפוי ${(gg.length / 1000).toFixed(2)} ק"מ` +
+      (Math.abs(diff) > 50 ? ` (${diff > 0 ? '+' : '−'}${Math.abs(diff / 1000).toFixed(2)})` : '') +
+      (match < 95 ? ` · ${match}% זהה למסלול` : ' · זהה למסלול') + ' · דורש קליטה';
+  } else $('#google-sub').textContent = `${gg.points.length} נקודות ביניים · דורש קליטה`;
 }
 
 async function loadElevations() {
@@ -440,12 +435,12 @@ function bindActions() {
   bindRadio('#pref-traffic', () => { clearRoutes(); saveSettings(); });
   bindRadio('#pref-green', () => { clearRoutes(); saveSettings(); });
 
-  $('#btn-gpx').addEventListener('click', async () => {
+  $('#btn-watch').addEventListener('click', async () => {
     const r = state.routes[state.selected]; if (!r) return;
     const km = (r.length / 1000).toFixed(1);
     const name = `לולאה ${km} ק"מ`;
     const date = new Date().toISOString().slice(0, 10);
-    const res = await shareOrDownload(`loop-${km}km-${date}.gpx`, toGpx(name, r.coords, r.waypoints));
+    const res = await shareOrDownload(`loop-${km}km-${date}.gpx`, toGpx(name, r.coords));
     if (res === 'downloaded') setStatus('קובץ GPX ירד למכשיר.');
   });
   $('#btn-share').addEventListener('click', async () => {

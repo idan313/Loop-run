@@ -2,7 +2,7 @@
  * רשת: נתוני מפה מ-Overpass (עם מראות גיבוי ומטמון), גובה מ-Open-Meteo,
  * וחיפוש כתובות מ-Nominatim.
  */
-import { overpassQuery } from './engine.js?v=4';
+import { overpassQuery } from './engine.js?v=5';
 
 const MIRRORS = [
   'https://overpass-api.de/api/interpreter',

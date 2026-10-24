@@ -3,7 +3,7 @@
  * פענוח נתוני המפה, בניית הגרף, חיפוש מסלולים ונקודות ניווט.
  * הגרף נשמר בזיכרון בין בקשות באותו אזור.
  */
-import { buildGraph, plan, navWaypoints } from './engine.js?v=4';
+import { buildGraph, plan, navPlan } from './engine.js?v=5';
 
 let graph = null, graphKey = null;
 
@@ -35,7 +35,7 @@ self.onmessage = (event) => {
         byClass: r.byClass,
         repeatShare: r.repeatShare,
         note: r.note || '',
-        waypoints: navWaypoints(graph, r),
+        google: navPlan(graph, r, 9),
       }));
       self.postMessage({ id, type: 'result', data: { routes: out, start: [graph.lat[start], graph.lon[start]] } });
       return;

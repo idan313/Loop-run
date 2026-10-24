@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>לולאה</title>
-<meta name="description" content="בונה מסלול ריצה לפי מרחק ומעביר אותו לניווט קולי ב-Apple Maps.">
+<meta name="description" content="בונה מסלול ריצה לפי מרחק, ושולח אותו לשעון או ל-Google Maps.">
 <meta name="theme-color" content="#eef1f2" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#111518" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Hebrew:wght@400;500;600;700&family=Secular+One&family=IBM+Plex+Mono:wght@500&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<link rel="stylesheet" href="app.css?v=4">
+<link rel="stylesheet" href="app.css?v=5">
 </head>
 <body>
 <div id="app">
@@ -27,7 +27,7 @@
   <main id="panel">
     <header class="brand">
       <h1>לולאה</h1>
-      <p>מסלול ריצה במרחק שבחרת, עם ניווט קולי ב-Apple Maps</p>
+      <p>מסלול ריצה במרחק שבחרת, עם ניווט בשעון או ב-Google Maps</p>
     </header>
 
     <section class="field" aria-labelledby="lbl-start">
@@ -109,39 +109,31 @@
         <svg id="profile-svg" viewBox="0 0 300 64" preserveAspectRatio="none" aria-hidden="true"></svg>
       </div>
       <div class="actions">
-        <a class="btn primary big" id="go-apple" href="#" rel="noopener">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19 12 4l7 15-7-4z"/></svg>
-          נווט ב-Apple Maps
-        </a>
-        <p class="sub" id="apple-sub"></p>
+        <button type="button" class="btn primary big" id="btn-watch">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="6" width="10" height="12" rx="3"/><path d="M9 6V3h6v3M9 18v3h6v-3"/></svg>
+          שלח לשעון (GPX)
+        </button>
+        <p class="sub">פותח את גיליון השיתוף. בוחרים WorkOutDoors או אפליקציה אחרת שמקבלת GPX.</p>
+        <a class="btn ghost big" id="go-google" href="#" rel="noopener">נווט ב-Google Maps</a>
+        <p class="sub" id="google-sub"></p>
         <div class="row wrap">
-          <a class="btn ghost" id="go-google" href="#" rel="noopener">Google Maps</a>
-          <button type="button" class="btn ghost" id="btn-gpx">קובץ GPX</button>
           <button type="button" class="btn ghost" id="btn-share">העתק קישור</button>
           <button type="button" class="btn ghost" id="btn-more">מסלולים אחרים</button>
         </div>
-        <p class="note" id="google-note"></p>
-        <details class="field test" id="apple-test">
-          <summary>בדיקת קישורי Apple Maps</summary>
-          <p class="note">בכל קישור בדוק אם העצירות נשארות ברשימה אחרי שהמסלול מחושב. צפוי: F עם 3, G עם 4, H עם 5, ו-I ו-J עם <span id="test-count"></span>.</p>
-          <ol id="apple-variants"></ol>
-        </details>
       </div>
     </section>
 
     <details class="field help">
       <summary>איך הניווט עובד</summary>
-      <p>המסלול נבנה כאן, ונשלח ל-Apple Maps כרשימת נקודות ביניים במצב הליכה. Apple Maps מנווטת עם הוראות קוליות גם כשהמסך כבוי, ומעבירה התראות לשעון.</p>
-      <p>נקודות הביניים נבחרות כך שהדרך הקצרה ביותר ביניהן היא המסלול שלנו. Apple Maps מחשבת לבד, ולכן המרחק אצלה יכול להיות שונה במעט.</p>
-      <p>דרוש iOS 18.4 ומעלה. אם האפליקציה של Apple Maps פותחת רק חלק מהנקודות, עדכן את המכשיר.</p>
-      <p>לריצה בלי קליטה: הורד מראש מפה אופליין ב-Apple Maps לאזור הריצה. Google Maps לא נותנת הוראות הליכה באופליין.</p>
-      <p>קובץ GPX מתאים לשעונים ולאפליקציות ריצה שמייבאות מסלולים.</p>
+      <p><strong>בשעון:</strong> קובץ GPX של המסלול המלא. ב-WorkOutDoors מקבלים התראות פנייה והתראה כשסוטים מהמסלול, עם מפה שמורה בשעון, גם בלי האייפון.</p>
+      <p><strong>ב-Google Maps:</strong> Google מקבלת עד 9 נקודות ביניים ומחשבת בעצמה את הדרך ביניהן. הקו המקווקו במפה הוא הדרך שהיא צפויה לבחור, והמרחק שלה מופיע מתחת לכפתור. אין בה הוראות הליכה באופליין.</p>
+      <p><strong>Apple Maps:</strong> לא נתמכת. בבדיקה היא מחקה את נקודות הביניים במצב הליכה.</p>
       <p class="credit">נתוני מפה © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">תורמי OpenStreetMap</a> · גובה מ-<a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a></p>
     </details>
   </main>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script type="module" src="js/app.js?v=4"></script>
+<script type="module" src="js/app.js?v=5"></script>
 </body>
 </html>

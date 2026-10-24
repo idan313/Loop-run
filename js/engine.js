@@ -507,15 +507,15 @@ export function plan(g, opts, onProgress = () => {}) {
 
 function planError(code, message) { return Object.assign(new Error(message), { code }); }
 
-/* ===================== נקודות ניווט ל-Apple Maps ===================== */
+/* ===================== נקודות ניווט ל-Google Maps ===================== */
 
 /**
  * בוחר נקודות ביניים כך שאפליקציית ניווט שמחשבת בעצמה את הדרך הקצרה
  * ביותר בין כל שתי נקודות תיצמד למסלול שלנו.
  *
  * מכל נקודה מתקדמים לאורך המסלול כל עוד הקטע שלנו הוא גם הדרך הקצרה
- * ביותר (בסטייה של עד tol). איפה שזה נשבר, שמים נקודה באמצע הקשת
- * האחרונה שעוד מתאימה — באמצע רחוב ולא בצומת, כדי שהנקודה לא תיצמד
+ * ביותר (בסטייה של עד tol). איפה שזה נשבר, שמים נקודה ליד סוף הקשת
+ * האחרונה שעוד מתאימה — על הרחוב ולא בצומת, כדי שהנקודה לא תיצמד
  * לרחוב חוצה.
  *
  * זה קירוב: לאפליקציה יש מפה ושיקולים משלה. tol קטן = יותר נקודות.
@@ -524,7 +524,7 @@ export function navWaypoints(g, r, { tol = 25, maxLeg = 5000 } = {}) {
   const nodes = r.nodes, last = nodes.length - 1;
   const cum = new Float64Array(nodes.length);
   for (let i = 1; i <= last; i++) cum[i] = cum[i - 1] + g.eLen[r.edges[i - 1]];
-  const points = [];
+  const points = [], via = [];
   let i = 0;
   while (i < last) {
     const remaining = cum[last] - cum[i];
@@ -534,11 +534,48 @@ export function navWaypoints(g, r, { tol = 25, maxLeg = 5000 } = {}) {
     while (j < last && cum[j + 1] - cum[i] <= maxLeg && sp(nodes[j + 1]) >= cum[j + 1] - cum[i] - tol) j++;
     if (j >= last && sp(nodes[last]) >= cum[last] - cum[i] - tol) break;
     const a = nodes[j - 1], b = nodes[j];
-    // נקודה בשני-שלישים של הקשת, קרוב לסופה אבל לא על הצומת
     points.push([g.lat[a] + (g.lat[b] - g.lat[a]) * 0.66, g.lon[a] + (g.lon[b] - g.lon[a]) * 0.66]);
+    via.push(b);
     i = j;
   }
-  return points;
+  return { points, via };
+}
+
+const RAW = { mul: new Float32Array(6).fill(1), min: 1, litBonus: 1 };
+
+/**
+ * נקודות לאפליקציה עם תקרה על מספר הנקודות (Google Maps: 9).
+ * מגדילים את הסטייה המותרת עד שהמספר נכנס בתקרה, ואז מחשבים את המסלול
+ * שהאפליקציה צפויה לבחור: הדרך הקצרה ביותר בין כל שתי נקודות עוקבות.
+ */
+export function navPlan(g, r, max = 9) {
+  let lo = 15, hi = 4000, best = null;
+  let res = navWaypoints(g, r, { tol: lo });
+  if (res.points.length <= max) best = { ...res, tol: lo };
+  else {
+    for (let it = 0; it < 14 && hi - lo > 10; it++) {
+      const mid = (lo + hi) / 2;
+      res = navWaypoints(g, r, { tol: mid });
+      if (res.points.length <= max) { best = { ...res, tol: mid }; hi = mid; } else lo = mid;
+    }
+    if (!best) {
+      res = navWaypoints(g, r, { tol: hi });
+      best = { points: thin(res.points, max), via: thin(res.via, max), tol: hi };
+    }
+  }
+  const stops = [r.nodes[0], ...best.via, r.nodes[r.nodes.length - 1]];
+  const nodes = [stops[0]], edges = [];
+  for (let k = 1; k < stops.length; k++) {
+    if (stops[k] === stops[k - 1]) continue;
+    const leg = route(g, stops[k - 1], stops[k], RAW);
+    if (!leg) return { points: best.points, coords: null, length: null };
+    nodes.push(...leg.nodes.slice(1)); edges.push(...leg.edges);
+  }
+  let length = 0; for (const e of edges) length += g.eLen[e];
+  // כמה מהמסלול המקורי נשמר במסלול הצפוי
+  const mine = new Set(r.edges);
+  let kept = 0; for (const e of edges) if (mine.has(e)) kept += g.eLen[e];
+  return { points: best.points, coords: nodes.map((v) => [g.lat[v], g.lon[v]]), length, match: length ? kept / length : 0 };
 }
 
 /** מצמצם רשימת נקודות למקסימום, בשמירה על פיזור לאורך המסלול. */
